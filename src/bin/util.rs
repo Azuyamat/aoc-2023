@@ -1,0 +1,1 @@
+fn main() {} // Intellij stop screaming
