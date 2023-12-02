@@ -1,44 +1,20 @@
-#[derive(Debug)]
-struct Game {
-    id: u8,
-    blue: u8,
-    red: u8,
-    green: u8,
-    valid: bool
-}
-
-impl Game {
-    fn new(id: u8) -> Self {
-        Self {
-            id,
-            blue: 0,
-            red: 0,
-            green: 0,
-            valid: true
-        }
-    }
-}
-
 const BLUE_CUBES: u8 = 14;
 const RED_CUBES: u8 = 12;
 const GREEN_CUBES: u8 = 13;
 
 pub fn part_one(input: &str) -> Option<u32> {
-    let games: Vec<Game> = input.lines().into_iter().map(|line| {
-        let split = line.split(":").collect::<Vec<&str>>();
-        let id = split[0].replace("Game ", "").parse::<u8>().unwrap();
-        let colors = split[1];
-        let mut game = Game::new(id);
-        colors.split(";").for_each(|color_set| {
+    let games = input.lines().into_iter().filter_map(|line| {
+        let mut split = line.split(":");
+        let id = split.next().unwrap().trim_start_matches("Game ").parse::<u8>().unwrap();
+        let valid = split.next().unwrap().split(";").all(|color_set| {
             let mut blue = 0;
             let mut red = 0;
             let mut green = 0;
 
-            let color_set = color_set.split(",").collect::<Vec<&str>>();
-            color_set.iter().for_each(|color| {
-                let color = color.trim().split(" ").collect::<Vec<&str>>();
-                let amount = color[0].parse::<u8>().unwrap();
-                let color = color[1];
+            color_set.split(",").for_each(|color| {
+                let mut color = color.trim().split(" ");
+                let amount = color.next().unwrap().parse::<u8>().unwrap();
+                let color = color.next().unwrap();
                 match color {
                     "blue" => blue += amount,
                     "red" => red += amount,
@@ -46,22 +22,11 @@ pub fn part_one(input: &str) -> Option<u32> {
                     _ => ()
                 }
             });
-            game.blue += blue;
-            game.red += red;
-            game.green += green;
-            if blue > BLUE_CUBES || red > RED_CUBES || green > GREEN_CUBES { game.valid = false; }
+            blue > BLUE_CUBES || red > RED_CUBES || green > GREEN_CUBES
         });
-        return game;
-    }).collect();
-    let games = games.iter().filter(|game| game.valid == true).collect::<Vec<&Game>>();
-    Some(games.iter().map(|game| game.id as u32).sum::<u32>())
-}
-
-#[derive(Debug)]
-struct Game2 {
-    blue: Vec<u8>,
-    red: Vec<u8>,
-    green: Vec<u8>,
+        Some(id as u32).filter(|_| valid)
+    }).sum::<u32>();
+    Some(games)
 }
 
 fn max_value(numbers: &Vec<u8>) -> u16 {
@@ -71,11 +36,9 @@ fn max_value(numbers: &Vec<u8>) -> u16 {
 pub fn part_two(input: &str) -> Option<u16> {
     let games: u16 = input.lines().into_iter().map(|line| {
         let colors = &line.split(":").last().unwrap();
-        let mut game = Game2 {
-            blue: Vec::with_capacity(2),
-            red: Vec::with_capacity(2),
-            green: Vec::with_capacity(2)
-        };
+        let mut game_blue: Vec<u8> = Vec::with_capacity(2);
+        let mut game_red: Vec<u8> = Vec::with_capacity(2);
+        let mut game_green: Vec<u8> = Vec::with_capacity(2);
 
         colors.split(";").for_each(|color_set| {
             let mut blue: u8 = 0;
@@ -83,9 +46,9 @@ pub fn part_two(input: &str) -> Option<u16> {
             let mut green: u8 = 0;
 
             color_set.split(",").for_each(|color| {
-                let color = color.trim().split(" ").collect::<Vec<&str>>();
-                let amount = &color[0].parse::<u8>().unwrap_or(0);
-                match color[1] {
+                let mut color = color.trim().split(" ");
+                let amount = &color.next().unwrap().parse::<u8>().unwrap_or(0);
+                match color.next().unwrap() {
                     "blue" => blue += amount,
                     "red" => red += amount,
                     "green" => green += amount,
@@ -93,11 +56,11 @@ pub fn part_two(input: &str) -> Option<u16> {
                 }
             });
 
-            game.blue.push(blue);
-            game.red.push(red);
-            game.green.push(green);
+            game_blue.push(blue);
+            game_red.push(red);
+            game_green.push(green);
         });
-        max_value(&game.blue)*max_value(&game.red)*max_value(&game.green)
+        max_value(&game_blue)*max_value(&game_red)*max_value(&game_green)
     }).sum::<u16>();
     Some(games)
 }
