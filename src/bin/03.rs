@@ -1,4 +1,5 @@
 use std::cmp::{max, min};
+use regex::Captures;
 
 const fn is_part(c: char) -> bool {
     c != '.' && !c.is_ascii_digit()
@@ -55,12 +56,61 @@ pub fn part_one(input: &str) -> Option<u32> {
 }
 
 pub fn part_two(input: &str) -> Option<u32> {
-    None
+    let re = regex::Regex::new(r"\d+").unwrap();
+    let lines: Vec<&str> = input.lines().collect();
+    let matches: Vec<(usize, Captures)> = lines.iter().enumerate().map(|(i, line)| {
+        let captures = re.captures(line).unwrap();
+        (i, captures)
+    }).collect::<Vec<(usize, Captures)>>();
+
+    for (i, line) in lines.iter().enumerate() {
+        let current_line_matches = matches.iter().filter(|(j, _)| *j == i);
+        for matches in current_line_matches {
+            let range = matches.1.get(0).unwrap().range();
+            let start = range.start;
+            let end = range.end;
+            let points = get_box(start, end, i, lines.len(), true);
+            let adjacent_matches = matches.1.iter().filter(|capture| {
+                let range = capture.range();
+                let start = range.start;
+                let end = range.end;
+                points.iter().any(|(x, y)| {
+                    let line = lines.get(*y).unwrap();
+                    let c = line.chars().nth(*x).unwrap();
+                    is_part(c)
+                })
+            });
+        }
+
+
+    }
+    println!("{:?}", matches);
+    Some(0)
+}
+
+// Function to get all points around a point of a certain horizontal length
+fn get_box(start: usize, end: usize, current_y: usize, max_y: usize, only_current_line: bool) ->
+                                                                                              Vec<
+    (usize, usize)> {
+    let start = start.saturating_sub(1);
+    let end = end.saturating_add(1);
+
+    let mut start_y = max(0, current_y.saturating_sub(1));
+    if only_current_line { start_y = current_y; }
+    let end_y = min(max_y, current_y.saturating_add(1));
+
+    let mut points: Vec<(usize, usize)> = Vec::new();
+    for i in start..end { // X axis
+        for j in start_y..end_y { // Y axis
+            points.push((i, j));
+        }
+    }
+    points
 }
 
 fn main() {
     let input = &aoc::read_file("inputs", 3);
-    aoc::solve!(1, part_one, input);
+    // aoc::solve!(1, part_one, input);
     aoc::solve!(2, part_two, input);
 }
 
