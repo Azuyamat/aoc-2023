@@ -56,56 +56,48 @@ pub fn part_one(input: &str) -> Option<u32> {
 }
 
 pub fn part_two(input: &str) -> Option<u32> {
-    let re = regex::Regex::new(r"\d+").unwrap();
     let lines: Vec<&str> = input.lines().collect();
-    let matches: Vec<(usize, Captures)> = lines.iter().enumerate().map(|(i, line)| {
-        let captures = re.captures(line).unwrap();
-        (i, captures)
-    }).collect::<Vec<(usize, Captures)>>();
-
-    for (i, line) in lines.iter().enumerate() {
-        let current_line_matches = matches.iter().filter(|(j, _)| *j == i);
-        for matches in current_line_matches {
-            let range = matches.1.get(0).unwrap().range();
-            let start = range.start;
-            let end = range.end;
-            let points = get_box(start, end, i, lines.len(), true);
-            let adjacent_matches = matches.1.iter().filter(|capture| {
-                let range = capture.range();
-                let start = range.start;
-                let end = range.end;
-                points.iter().any(|(x, y)| {
-                    let line = lines.get(*y).unwrap();
-                    let c = line.chars().nth(*x).unwrap();
-                    is_part(c)
-                })
-            });
+    let gears: Vec<(usize, Vec<(usize)>)> = lines.iter().enumerate().filter_map(|(index, line)| {
+        let local_gears: Vec<usize> = line.chars().enumerate().filter_map(|(index, c)| { if c == '*' { Some(index) } else { None } }).collect::<Vec<usize>>();
+        return if local_gears.is_empty() { None } else { Some((index, local_gears)) };
+    }).collect::<Vec<(usize, Vec<(usize)>)>>();
+    let mut global_sum = 0;
+    for gear_line in gears {
+        let y = gear_line.0;
+        let local_gears = gear_line.1;
+        for gear in local_gears { // Gear is x pos
+            let surrounding_numbers = get_surrounding_numbers(gear, y, &lines);
+            if surrounding_numbers.len() != 2 { continue; }
+            let left = surrounding_numbers.get(0).unwrap();
+            let right = surrounding_numbers.get(1).unwrap();
+            let local_add = left*right;
+            global_sum+=local_add;
         }
-
-
     }
-    println!("{:?}", matches);
-    Some(0)
+    Some(global_sum)
 }
 
-// Function to get all points around a point of a certain horizontal length
-fn get_box(start: usize, end: usize, current_y: usize, max_y: usize, only_current_line: bool) ->
-                                                                                              Vec<
-    (usize, usize)> {
-    let start = start.saturating_sub(1);
-    let end = end.saturating_add(1);
+fn get_surrounding_numbers(x: usize, y: usize, lines: &Vec<&str>) -> Vec<u32> {
+    let re = regex::Regex::new(r"\d+").unwrap();
 
-    let mut start_y = max(0, current_y.saturating_sub(1));
-    if only_current_line { start_y = current_y; }
-    let end_y = min(max_y, current_y.saturating_add(1));
+    let min_y = max(0, y.saturating_sub(1));
+    let max_y = min(lines.len(), y.saturating_add(2));
+    let x_vec = vec!(x.saturating_sub(1), x, x.saturating_add(1));
 
-    let mut points: Vec<(usize, usize)> = Vec::new();
-    for i in start..end { // X axis
-        for j in start_y..end_y { // Y axis
-            points.push((i, j));
-        }
-    }
-    points
+    let surrounding_numbers = (min_y..max_y).map(|y| {
+        let line = lines.get(y).unwrap();
+        let captures = re.captures_iter(&line).collect::<Vec<Captures>>();
+        let numbers: Vec<u32> = captures.iter().filter_map(|capture| {
+            let capture = capture.get(0).unwrap();
+            let range = capture.range();
+            // Check if range contains x from x_vec
+            let valid = x_vec.iter().any(|x| range.contains(x));
+            if !valid { return None; }
+            Some(capture.as_str().parse::<u32>().unwrap())
+        }).collect::<Vec<u32>>();
+        numbers
+    }).flatten().collect::<Vec<u32>>();
+    surrounding_numbers
 }
 
 fn main() {
